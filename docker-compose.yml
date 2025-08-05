@@ -1,29 +1,50 @@
 services:
-  # Data sources
+  ### Data sources
   mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: streamhouse
+    ports:
+      - 3306:3306
+    volumes:
+      - ./src/mysql/data:/var/lib/mysql
+    networks:
+      - streamhouse
 
   mongodb:
+    image: mongo:latest
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    ports:
+      - 27017:27017
+    volumes:
+      - ./src/mongodb/data:/data/db
+    networks:
+      - streamhouse
 
-  # Lakehouse storage
+  ### Lakehouse storage
   namenode: 
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.3.
 
   datanode:
 
-  # Ingestion Layer
+  ### Ingestion Layer
   kafka: 
 
   kafka-connect:
 
-  # Processing Layer
+  ### Processing Layer
   flink:
 
-  # Mart Layer
+  ### Mart Layer
   clickhouse:
 
-  # Query Engine
+  ### Query Engine
   trino:
 
-  # Visualize Layer
+  ### Visualize Layer
   superset:
 
 networks:
