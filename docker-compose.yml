@@ -1,51 +1,149 @@
 services:
   ### Data sources
   mysql:
+    container_name: mysql
+    hostname: mysql
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: streamhouse
     ports:
       - 3306:3306
-    volumes:
-      - ./src/mysql/data:/var/lib/mysql
+    # volumes:
+    #   - ./src/mysql/data:/var/lib/mysql
     networks:
       - streamhouse
 
   mongodb:
+    container_name: mongodb
+    hostname: mongodb
     image: mongo:latest
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: root
     ports:
       - 27017:27017
-    volumes:
-      - ./src/mongodb/data:/data/db
+    # volumes:
+    #   - ./src/mongodb/data:/data/db
     networks:
       - streamhouse
 
   ### Lakehouse storage
   namenode: 
-    image: bde2020/hadoop-namenode:2.0.0-hadoop3.3.
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    hostname: namenode
+    environment:
+      CLUSTER_NAME: streamhouse
+      HADOOP_CONF_DIF: /etc/hadoop
+    ports:
+      - 8020:8020
+      - 9870:9870
+    entrypoint: /bin/bash
+    command: 
+      - c
+      - |
+        if [ ! -f "/opt/data/namenode/current/VERSION" ]; then
+          echo "Formatting Namenode........................."
+          hdfs namenode -format -force
+        fi
+        hdfs namenode
+    volumes:
+      - ./src/hadoop/conf/core-site.xml:/etc/hadoop/core-site.xml
+      - ./src/hadoop/conf/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
+      - ./src/hadoop/conf/yarn-site.xml:/etc/hadoop/yarn-site.xml
+      - ./src/hadoop/data/namenode:/opt/data/namenode
+    networks:
+      - streamhouse
 
   datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    hostname: datanode
+    environment:
+      HADOOP_CONF_DIR: /etc/hadoop
+    volumes:
+      - ./src/hadoop/conf/core-site.xml:/etc/hadoop/core-site.xml
+      - ./src/hadoop/conf/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
+      - ./src/hadoop/conf/yarn-site.xml:/etc/hadoop/yarn-site.xml
+      - ./src/hadoop/data/datanode:/opt/data/datanode
+    networks:
+      - streamhouse
 
-  ### Ingestion Layer
-  kafka: 
+  ### Cluster Manager
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: resourcemanager
+    hostname: resourcemanager
+    environment:
+      HADOOP_CONF_DIR: /etc/hadoop
+    ports:
+      - 8088:8088
+    volumes:
+      - ./src/hadoop/conf/core-site.xml:/etc/hadoop/core-site.xml
+      - ./src/hadoop/conf/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
+      - ./src/hadoop/conf/yarn-site.xml:/etc/hadoop/yarn-site.xml
+    networks:
+      - streamhouse
+    
+  nodemanager:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: nodemanager
+    hostname: nodemanager
+    environment:
+      HADOOP_CONF_DIR: /etc/hadoop
+    ports:
+      - 8042:8042
+    volumes:
+      - ./src/hadoop/conf/core-site.xml:/etc/hadoop/core-site.xml
+      - ./src/hadoop/conf/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
+      - ./src/hadoop/conf/yarn-site.xml:/etc/hadoop/yarn-site.xml
+    networks:
+      - streamhouse
 
-  kafka-connect:
+  # ### Ingestion Layer
+  # kafka: 
+
+  # kafka-connect:
 
   ### Processing Layer
-  flink:
+  jobmanager: 
+    image: flink:2.1.0-scala_2.12-java17
+    container_name: jobmanager
+    hostname: jobmanager
+    environment:
+      FLINK_CONF_DIR: /opt/flink/conf
+      FLINK_PROPERTIES: jobmanager.rpc.address:jobmanager
+    ports:
+      - 8081:8081
+      - 6123:6123
+    command:
+      - jobmanager
+    networks:
+      - streamhouse
 
-  ### Mart Layer
-  clickhouse:
+  taskmanager:
+    image: flink:2.1.0-scala_2.12-java17
+    container_name: taskmanager
+    hostname: taskmanager
+    environment:
+      FLINK_CONF_DIR: /opt/flink/conf
+      FLINK_PROPERTIES: jobmanager.rpc.address:jobmanager
+    ports:
+      - 6121:6121
+    command:
+      - taskmanager
+    networks:
+      - streamhouse
 
-  ### Query Engine
-  trino:
+  # ### Mart Layer
+  # clickhouse:
 
-  ### Visualize Layer
-  superset:
+  # ### Query Engine
+  # trino:
+
+  # ### Visualize Layer
+  # superset:
 
 networks:
   streamhouse:
