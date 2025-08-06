@@ -41,7 +41,7 @@ services:
       - 9870:9870
     entrypoint: /bin/bash
     command: 
-      - c
+      - -c
       - |
         if [ ! -f "/opt/data/namenode/current/VERSION" ]; then
           echo "Formatting Namenode........................."
@@ -52,7 +52,7 @@ services:
       - ./src/hadoop/conf/core-site.xml:/etc/hadoop/core-site.xml
       - ./src/hadoop/conf/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
       - ./src/hadoop/conf/yarn-site.xml:/etc/hadoop/yarn-site.xml
-      - ./src/hadoop/data/namenode:/opt/data/namenode
+      # - ./src/hadoop/data/namenode:/opt/data/namenode
     networks:
       - streamhouse
 
@@ -66,7 +66,7 @@ services:
       - ./src/hadoop/conf/core-site.xml:/etc/hadoop/core-site.xml
       - ./src/hadoop/conf/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
       - ./src/hadoop/conf/yarn-site.xml:/etc/hadoop/yarn-site.xml
-      - ./src/hadoop/data/datanode:/opt/data/datanode
+      # - ./src/hadoop/data/datanode:/opt/data/datanode
     networks:
       - streamhouse
 
@@ -108,29 +108,53 @@ services:
 
   ### Processing Layer
   jobmanager: 
-    image: flink:2.1.0-scala_2.12-java17
+    image: flink:2.0.0-scala_2.12-java17
     container_name: jobmanager
     hostname: jobmanager
     environment:
       FLINK_CONF_DIR: /opt/flink/conf
       FLINK_PROPERTIES: jobmanager.rpc.address:jobmanager
+      HADOOP_CONF_DIR: /etc/hadoop
+
+
     ports:
       - 8081:8081
       - 6123:6123
+    volumes:
+      - ./src/hadoop/conf/core-site.xml:/etc/hadoop/core-site.xml
+      - ./src/hadoop/conf/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
+      - ./src/hadoop/conf/yarn-site.xml:/etc/hadoop/yarn-site.xml
+      - ./src/flink/lib/hadoop-client-3.2.1.jar:/opt/flink/lib/hadoop-client-3.2.1.jar
+      - ./src/flink/lib/hadoop-hdfs-client-3.2.1.jar:/opt/flink/lib/hadoop-hdfs-client-3.2.1.jar
+      - ./src/flink/lib/hadoop-hdfs-3.2.1.jar:/opt/flink/lib/hadoop-hdfs-3.2.1.jar
+      - ./src/flink/lib/paimon-flink-2.0-1.2.0.jar:/opt/flink/lib/paimon-flink-2.0-1.2.0.jar
+      - ./src/flink/lib/hadoop-common-3.2.1.jar:/opt/flink/lib/hadoop-common-3.2.1.jar
+      - ./src/flink/lib/flink-hadoop-compatibility-2.0.0.jar:/opt/flink/lib/flink-hadoop-compatibility-2.0.0.jar
     command:
       - jobmanager
     networks:
       - streamhouse
 
   taskmanager:
-    image: flink:2.1.0-scala_2.12-java17
+    image: flink:2.0.0-scala_2.12-java17
     container_name: taskmanager
     hostname: taskmanager
     environment:
       FLINK_CONF_DIR: /opt/flink/conf
       FLINK_PROPERTIES: jobmanager.rpc.address:jobmanager
+      HADOOP_CONF_DIR: /etc/hadoop
     ports:
       - 6121:6121
+    volumes:
+      - ./src/hadoop/conf/core-site.xml:/etc/hadoop/core-site.xml
+      - ./src/hadoop/conf/hdfs-site.xml:/etc/hadoop/hdfs-site.xml
+      - ./src/hadoop/conf/yarn-site.xml:/etc/hadoop/yarn-site.xml
+      - ./src/flink/lib/hadoop-client-3.2.1.jar:/opt/flink/lib/hadoop-client-3.2.1.jar
+      - ./src/flink/lib/hadoop-hdfs-client-3.2.1.jar:/opt/flink/lib/hadoop-hdfs-client-3.2.1.jar
+      - ./src/flink/lib/hadoop-hdfs-3.2.1.jar:/opt/flink/lib/hadoop-hdfs-3.2.1.jar
+      - ./src/flink/lib/paimon-flink-2.0-1.2.0.jar:/opt/flink/lib/paimon-flink-2.0-1.2.0.jar
+      - ./src/flink/lib/hadoop-common-3.2.1.jar:/opt/flink/lib/hadoop-common-3.2.1.jar
+      - ./src/flink/lib/flink-hadoop-compatibility-2.0.0.jar:/opt/flink/lib/flink-hadoop-compatibility-2.0.0.jar
     command:
       - taskmanager
     networks:
